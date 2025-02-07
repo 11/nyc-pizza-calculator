@@ -1,0 +1,534 @@
+<html>
+  <head>
+    <title>NYC Pizza Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+
+    <script type="module">
+      import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js'
+
+       const DefaultPreferences = {
+        LOW: 'LOW',
+        MEDIUM: 'MEDIUM',
+        HIGH: 'HIGH',
+        DANGER: 'DANGER',
+      }
+
+      const CrustPreferences = {
+        TRADITIONAL: 'TRADITIONAL',
+        AIRY: 'AIRY',
+        ULTRA_AIRY: 'ULTRA_AIRY',
+      }
+
+      class PizzaCalculator extends LitElement {
+        static get styles () {
+          return [
+            css`
+            article {
+              overflow-y: scroll;
+              width: 100%;
+              height: 100%;
+            }
+
+            .input-row {
+              font-size: 1.25rem;
+              display: flex;
+              gap: 1rem;
+              width: 100%;
+              padding: 0 0 .5rem 0;
+            }
+
+            label {
+              font-size: 1rem;
+              font-weight: bold;
+              font-family: sans-serif;
+            }
+
+            section {
+              margin-bottom: 2rem;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              border: 2px solid rgb(140 140 140);
+              font-family: sans-serif;
+              font-size: 1rem;
+              letter-spacing: 1px;
+            }
+
+            h3 {
+              margin: 0 0 .5rem 0;
+              h3-side: bottom;
+              font-weight: bold;
+            }
+
+            thead, tfoot {
+              background-color: rgb(228 240 245);
+            }
+
+            th, td {
+              border: 1px solid rgb(160 160 160);
+              padding: 8px 10px;
+            }
+
+            td:last-of-type {
+              text-align: center;
+            }
+
+            tbody > tr:nth-of-type(even) {
+              background-color: rgb(237 238 242);
+            }
+
+            tfoot th {
+              text-align: right;
+            }
+
+            tfoot td {
+              font-weight: bold;
+            }
+            `
+          ]
+        }
+
+        static properties = {
+          ingredientPortions: { type: Object },
+        }
+
+        constructor () {
+          super()
+          // input values
+          this.pizzaSizeInInches = 12
+          this.noPizzas          = 1
+          this.crustPreference   = CrustPreferences.AIRY
+          this.saucePreference   = DefaultPreferences.MEDIUM
+          this.cheesePreference  = DefaultPreferences.MEDIUM
+
+
+          this.ingredientPortions = this.calculateIngredientPortions()
+        }
+
+        calculateIngredientPortions () {
+          //
+          // MASTER SAUCE TABLE
+          //
+
+          const tomatoes = 105
+          const water    = tomatoes / 4
+          const salt     = tomatoes * (3  / 28)
+          const sugar    = tomatoes * (12 / 28)
+          const oregano  = tomatoes * (2  / 28)
+
+
+          //
+          // CONVERTING GLUTEN TABLE
+          //
+
+
+          const startingFlourProteinPercentage    = 12.7
+          const vitalWheatGlutenProteinPercentage = 75.0
+          const goalProtein                       = 14.2
+          const vitalWheatGlutenNeededPercentage  = ((goalProtein - startingFlourProteinPercentage) / (vitalWheatGlutenProteinPercentage- startingFlourProteinPercentage))
+
+
+          //
+          // DOUGH RECIPE
+          //
+
+          // dough bakers %
+          const highGlutenFlourBakersPercentage       = 0.90
+          const siftedSpeltOrRyeFlourBakersPercentage = 0.10
+          const saltBakersPercentage                  = 0.03
+          const instantYeastBakersPercentage          = 0.005
+          const sugarBakersPercentage                 = 0.015
+          const waterBakerPercentageMap               = { [CrustPreferences.TRADITIONAL]: 0.61, [CrustPreferences.AIRY]: 0.65, [CrustPreferences.ULTRA_AIRY]: 0.69 }
+          const waterBakersPercentage                 = waterBakerPercentageMap[this.crustPreference]
+          const bakersPercentageTotal                 = highGlutenFlourBakersPercentage
+                                                         + siftedSpeltOrRyeFlourBakersPercentage
+                                                         + saltBakersPercentage
+                                                         + waterBakersPercentage
+                                                         + instantYeastBakersPercentage
+                                                         + sugarBakersPercentage
+
+
+          // dough recipe grams
+          const doughGramsTotal            = (Math.pow((this.pizzaSizeInInches - 0.75) / 2, 2) * Math.PI) * 0.09 * 28.35 * this.noPizzas
+                                             // (POWER   ((C3                     - 0.75) / 2, 2) * PI()   ) * 0.09 * 28.35 * $C$4
+          const highGlutenFlourGrams       = doughGramsTotal              * (0.909                / bakersPercentageTotal)
+          const siftedSpeltOrRyeFlourGrams = doughGramsTotal              * (0.091                / bakersPercentageTotal)
+          const waterGrams                 = waterBakersPercentage        * (highGlutenFlourGrams + siftedSpeltOrRyeFlourGrams)
+          const saltGrams                  = saltBakersPercentage         * (highGlutenFlourGrams + siftedSpeltOrRyeFlourGrams)
+          const instantYeastGrams          = instantYeastBakersPercentage * (highGlutenFlourGrams + siftedSpeltOrRyeFlourGrams)
+          const sugarGrams                 = sugarBakersPercentage        * (highGlutenFlourGrams + siftedSpeltOrRyeFlourGrams)
+
+          // dough volume
+          const highGlutenFlourCups       = (highGlutenFlourGrams       / 125)
+          const siftedSpeltOrRyeFlourTbsp = (siftedSpeltOrRyeFlourGrams / 125) * 16
+          const waterFluidOz              = (waterGrams                 / 29.57)
+          const saltTsp                   = (saltGrams                  / 2.8)
+          const instantYeastTsp           = (instantYeastGrams          * 0.3333)
+          const sugarTsp                  = (sugarGrams                 / 4)
+          const volumePerDoughBallTotal   = (doughGramsTotal            / this.noPizzas)
+
+
+          //
+          // TOPPINGS PER PIZZA TABLE
+          //
+
+
+          // calculated toppings per pizza
+          const toppingsMap       = { [DefaultPreferences.LOW]: 0.585, [DefaultPreferences.MEDIUM]: 0.685, [DefaultPreferences.HIGH]: 0.785, [DefaultPreferences.DANGER]: 0.905 }
+          const sauceToppings     = toppingsMap[this.saucePreference]
+          const cheeseToppings    = toppingsMap[this.cheesePreference]
+          const pecocrinoToppings = 0.04
+
+          // calculated toppings grams
+          const sauceGrams    = (doughGramsTotal * (sauceToppings     / bakersPercentageTotal)) / this.noPizzas
+          const cheeseGrams   = (doughGramsTotal * (cheeseToppings    / bakersPercentageTotal)) / this.noPizzas
+          const pecorinoGrams = (doughGramsTotal * (pecocrinoToppings / bakersPercentageTotal)) / this.noPizzas
+
+          // calculated topping volumes
+          const sauceFlOz       = sauceGrams    / 29.57
+          const cheeseCupGrated = cheeseGrams   / 113
+          const pexorinoTbsp    = pecorinoGrams / 5.3
+
+
+          //
+          // RESULT
+          //
+
+          return {
+            masterSauce: {
+              tomatoes,
+              water,
+              salt,
+              sugar,
+              oregano
+            },
+            convertingFlourToHighGluten: {
+              startingFlourProteinPercentage,
+              vitalWheatGlutenProteinPercentage,
+              goalProtein,
+              vitalWheatGlutenNeededPercentage
+            },
+            doughRecipe: {
+              bakersPercentage: {
+                highGlutenFlourBakersPercentage,
+                siftedSpeltOrRyeFlourBakersPercentage,
+                waterBakersPercentage,
+                saltBakersPercentage,
+                instantYeastBakersPercentage,
+                sugarBakersPercentage,
+                bakersPercentageTotal
+              },
+              grams: {
+                highGlutenFlourGrams,
+                siftedSpeltOrRyeFlourGrams,
+                waterGrams,
+                saltGrams,
+                instantYeastGrams,
+                sugarGrams,
+                doughGramsTotal,
+              },
+              volume: {
+                highGlutenFlourCups,
+                siftedSpeltOrRyeFlourTbsp,
+                waterFluidOz,
+                saltTsp,
+                instantYeastTsp,
+                sugarTsp,
+                volumePerDoughBallTotal
+              }
+            },
+            toppings: {
+              preferences: {
+                sauceToppings,
+                cheeseToppings,
+                pecocrinoToppings
+              },
+              grams: {
+                sauceGrams,
+                cheeseGrams,
+                pecorinoGrams
+              },
+              volume: {
+                sauceFlOz,
+                cheeseCupGrated,
+                pexorinoTbsp
+              }
+            }
+          }
+        }
+
+        renderInputs () {
+          return html`
+            <section>
+              <div class='input-row'>
+                <label>Pizza size (in inches)</label>
+                <select @change=${(event) => {
+                  this.pizzaSizeInInches = parseInt(event.target.value)
+                  this.ingredientPortions = this.calculateIngredientPortions()
+                }}>
+                  <option value='12'>12 inches</option>
+                  <option value='14'>14 inches</option>
+                  <option value='16'>16 inches</option>
+                  <option value='18'>18 inches</option>
+                </select>
+              </div>
+
+              <div class='input-row'>
+                <label>Number of pizzas</label>
+                <input
+                  type='number'
+                  value='1'
+                  @change=${(event) => {
+                    this.noPizzas = parseInt(event.target.value)
+                    this.ingredientPortions = this.calculateIngredientPortions()
+                  }}
+                />
+              </div>
+
+              <div class='input-row'>
+                <label>Crust preference</label>
+                <select @change=${(event) => {
+                  this.crustPreference = event.target.value
+                  this.ingredientPortions = this.calculateIngredientPortions()
+                }}>
+                  <option value='${CrustPreferences.TRADITIONAL}'>Traditional</option>
+                  <option value='${CrustPreferences.AIRY}'>Airy (Recommend)</option>
+                  <option value='${CrustPreferences.ULTRA_AIRY}'>Ultra airy</option>
+                </select>
+              </div>
+
+              <div class='input-row'>
+                <label>Sauce preference</label>
+                <select @change=${(event) => {
+                  this.saucePreference = event.target.value
+                  this.ingredientPortions = this.calculateIngredientPortions()
+                }}>
+                  <option value='${DefaultPreferences.LOW}'>Low</option>
+                  <option value='${DefaultPreferences.MEDIUM}'>Medium (Recommended)</option>
+                  <option value='${DefaultPreferences.HIGH}'>High</option>
+                  <option value='${DefaultPreferences.DANGER}'>Danger</option>
+                </select>
+              </div>
+
+              <div class='input-row'>
+                <label>Cheese preference</label>
+                <select @change=${(event) => {
+                  this.cheesePreference = event.target.value
+                  this.ingredientPortions = this.calculateIngredientPortions()
+                }}>
+                  <option value='${DefaultPreferences.LOW}'>Low</option>
+                  <option value='${DefaultPreferences.MEDIUM}'>Medium (Recommended)</option>
+                  <option value='${DefaultPreferences.HIGH}'>High</option>
+                  <option value='${DefaultPreferences.DANGER}'>Danger</option>
+                </select>
+              </div>
+            </section>
+          `
+        }
+
+        renderPizzaPortions () {
+          return html`
+            <section>
+              <h3> Master Sauce Recipe </h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Quanitiy</th>
+                    <th>Measurement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope='row'>Tomatoes</th>
+                    <td>${this.ingredientPortions.masterSauce.tomatoes}</td>
+                    <td>oz</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Water</th>
+                    <td>${this.ingredientPortions.masterSauce.water}</td>
+                    <td>oz</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Salt</th>
+                    <td>${this.ingredientPortions.masterSauce.salt.toFixed(1)}</td>
+                    <td>grams</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Sugar</th>
+                    <td>${this.ingredientPortions.masterSauce.sugar.toFixed(1)}</td>
+                    <td>grams</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Oregano</th>
+                    <td>${this.ingredientPortions.masterSauce.oregano}</td>
+                    <td>tsp</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h3>Converting Flour to High Gluten</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope='row'>Starting Flour Protein %</th>
+                    <td>${this.ingredientPortions.convertingFlourToHighGluten.startingFlourProteinPercentage}%</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Vital Wheat Gluten Protein %</th>
+                    <td>${this.ingredientPortions.convertingFlourToHighGluten.vitalWheatGlutenProteinPercentage}%</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Goal Protein %</th>
+                    <td>${this.ingredientPortions.convertingFlourToHighGluten.goalProtein}%</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>% Vital Wheat Gluten Needed</th>
+                    <td>${(this.ingredientPortions.convertingFlourToHighGluten.vitalWheatGlutenNeededPercentage * 100).toFixed(1)}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h3>Dough recipe</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Baker's %</th>
+                    <th>Grams</th>
+                    <th>Volume</th>
+                    <th>Measurement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope='row'>High-gluten Flour</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.highGlutenFlourBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.highGlutenFlourGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.highGlutenFlourCups.toFixed(2)}</td>
+                    <td>cups</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Sifted-spelt or Rye Flour</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.siftedSpeltOrRyeFlourBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.siftedSpeltOrRyeFlourGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.siftedSpeltOrRyeFlourTbsp.toFixed(2)}</td>
+                    <td>tbsp</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Water</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.waterBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.waterGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.waterFluidOz.toFixed(1)}</td>
+                    <td>fl oz</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Salt</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.saltBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.saltGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.saltTsp.toFixed(2)}</td>
+                    <td>tsp</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Instant yeast</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.instantYeastBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.instantYeastGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.instantYeastTsp.toFixed(2)}</td>
+                    <td>tsp</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Sugar</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.sugarBakersPercentage * 100}%</td>
+                    <td>${this.ingredientPortions.doughRecipe.grams.sugarGrams.toFixed(1)}</td>
+                    <td>${this.ingredientPortions.doughRecipe.volume.sugarTsp.toFixed(2)}</td>
+                    <td>tsp</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Total</th>
+                    <td>${this.ingredientPortions.doughRecipe.bakersPercentage.bakersPercentageTotal * 100}%</td>
+                    <td>${Math.round(this.ingredientPortions.doughRecipe.grams.doughGramsTotal, 1)}</td>
+                    <td>${Math.round(this.ingredientPortions.doughRecipe.volume.volumePerDoughBallTotal, 1)}</td>
+                    <td>Per dough ball</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section>
+              <h3>Toppings (per pizza)</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th></th>
+                    <th>Grams</th>
+                    <th>Volume</th>
+                    <th>Measurement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope='row'>Sauce</th>
+                    <td>${this.ingredientPortions.toppings.preferences.sauceToppings * 100}</td>
+                    <td>${this.ingredientPortions.toppings.grams.sauceGrams.toFixed(0)}</td>
+                    <td>${this.ingredientPortions.toppings.volume.sauceFlOz.toFixed(1)}</td>
+                    <td>fl oz</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Mozzarella</th>
+                    <td>${this.ingredientPortions.toppings.preferences.cheeseToppings * 100}</td>
+                    <td>${this.ingredientPortions.toppings.grams.cheeseGrams.toFixed(0)}</td>
+                    <td>${this.ingredientPortions.toppings.volume.cheeseCupGrated.toFixed(2)}</td>
+                    <td>cups (grated)</td>
+                  </tr>
+                  <tr>
+                    <th scope='row'>Pecorino</th>
+                    <td>${this.ingredientPortions.toppings.preferences.pecocrinoToppings * 100}</td>
+                    <td>${this.ingredientPortions.toppings.grams.pecorinoGrams.toFixed(0)}</td>
+                    <td>${this.ingredientPortions.toppings.volume.pexorinoTbsp.toFixed(1)}</td>
+                    <td>tbsp (ungrated)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          `
+        }
+
+        render() {
+          return html`
+            <article>
+              <h1>NYC Pizza Calculator</h1>
+              ${this.renderInputs()}
+              ${this.renderPizzaPortions()}
+            </article>
+          `
+        }
+      }
+
+      customElements.define('pizza-calculator', PizzaCalculator)
+    </script>
+  </head>
+  <body>
+    <pizza-calculator></pizza-calculator>
+  </body>
+</html>
